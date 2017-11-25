@@ -7,11 +7,13 @@
 #include <Adafruit_MMA8451.h>
 #include <Adafruit_Sensor.h>
 
-// Wifi, MQTT and NTP Support
+// Wifi and NTP Support
 #include <ESP8266WiFi.h>
-#include <PubSubClient.h>
-#include <WiFiUDP.h>
 #include <NTPClient.h>
+#include <WiFiUDP.h>
+
+// MQTT
+#include <PubSubClient.h>
 
 // JSON Support
 #include <ArduinoJson.h>
@@ -28,7 +30,11 @@
 #define FILTER_FREQUENCY 10   // filter 10Hz and higher
 #define SAMPLES_PER_SECOND 64 //sample at 30Hz - Needs to be minimum 2x higher than desired filterFrequency
 
-#define MQTT_MAX_PACKET_SIZE 255 // override size
+// MQTT Packet Size override
+#ifdef MQTT_MAX_PACKET_SIZE      //if the macro MQTT_MAX_PACKET_SIZE is defined
+#undef MQTT_MAX_PACKET_SIZE      // un-define it
+#define MQTT_MAX_PACKET_SIZE 1024 // override size
+#endif
 
 /********************************************/
 /*                 Globals                  */
@@ -42,8 +48,8 @@ arduinoFFT FFT = arduinoFFT();
 // Accelerometer threshold
 float energy_thresh = 15.0f;
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+WiFiClient esp_wifi_client;
+PubSubClient mqtt_client(esp_wifi_client);
 
 // NTP Client
 WiFiUDP ntpUDP;
@@ -61,10 +67,8 @@ FilterOnePole filterY(LOWPASS, FILTER_FREQUENCY);
 FilterOnePole filterZ(LOWPASS, FILTER_FREQUENCY);
 
 // Misc Values (WiFi & MQTT)
-int status = WL_IDLE_STATUS;
 int msgCount = 0, msgReceived = 0;
 bool realtime = false;
-char payload[512];
 char rcvdPayload[512];
 
 double totalEnergy(double array[])
@@ -92,40 +96,36 @@ float normalMagnitude(float ax, float ay, float az)
     return (sqrt(pow(ax, 2) + pow(ay, 2) + pow(az, 2)));
 }
 
-void callback(char *topic, byte *payload, unsigned int length)
+void callback(char *topic, byte *payLoad, unsigned int payloadLen)
 {
-    Serial.print("Message arrived [");
-    Serial.print(topic);
-    Serial.print("] ");
-    for (int i = 0; i < length; i++)
-    {
-        Serial.print((char)payload[i]);
-    }
-    Serial.println();
+    strncpy(rcvdPayload, reinterpret_cast<const char *>(payLoad), payloadLen);
+    rcvdPayload[payloadLen] = 0;
+    msgReceived = 1;
 }
 
 void setup_wifi()
 {
-    delay(10);
-    // We start by connecting to a WiFi network
+    unsigned long Connection_Timeout; // Variable that measures the time it takes to connect to WiFi
+
     Serial.println();
-    Serial.print("Connecting to ");
+    Serial.print("Connecting to: ");
     Serial.println(ssid);
 
     WiFi.begin(ssid, password);
 
-    while (WiFi.status() != WL_CONNECTED)
+    Connection_Timeout = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - Connection_Timeout < 5000) // Gives the ESP 5 seconds to connect to a WiFi
     {
-        delay(500);
+        delay(100);
         Serial.print(".");
     }
 
-    randomSeed(micros());
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        Serial.println();
+        Serial.print("Wifi connected with IP: ");
+        Serial.println(WiFi.localIP());
+    }
 }
 
 void setup_ntp()
@@ -137,31 +137,33 @@ void setup_ntp()
 void reconnect()
 {
     // Loop until we're reconnected
-    while (!client.connected())
+    if (!mqtt_client.connected())
     {
-        Serial.print("Attempting MQTT connection...");
-        // Attempt to connect
-        if (client.connect(mqtt_server_client_id, mqtt_server_user, mqtt_server_pass))
+        if (mqtt_client.connect(mqtt_server_client_id, mqtt_server_user, mqtt_server_pass))
         {
-            Serial.println("connected");
-            // Once connected, publish an announcement...
-            client.publish("test/pub", "hello world");
-            // ... and resubscribe
-            client.subscribe(mqtt_thing_topic_sub);
+            Serial.println("mqtt [Connected]");
+            mqtt_client.subscribe(mqtt_thing_topic_sub);
         }
         else
         {
-            Serial.print("failed, rc=");
-            Serial.print(client.state());
-            Serial.println(" try again in 5 seconds");
-            // Wait 5 seconds before retrying
-            delay(5000);
+            Serial.println("mqtt [Failed]");
+            delay(3000);
         }
     }
 }
 
+void setup_mqtt()
+{
+    mqtt_client.setServer(mqtt_server, mqtt_server_port);
+    mqtt_client.setCallback(callback);
+    reconnect();
+}
+
 void setup_accl()
 {
+    // NTP Update
+    timeClient.update();
+
     if (!mma.begin())
     {
         Serial.println("accl [Failed]");
@@ -179,10 +181,7 @@ void setup()
 
     setup_wifi();
     setup_ntp();
-
-    client.setServer(mqtt_server, mqtt_server_port);
-    client.setCallback(callback);
-
+    setup_mqtt();
     setup_accl();
 
     delayTime = 1 / SAMPLES_PER_SECOND * 1000; //in millis
@@ -192,14 +191,11 @@ void setup()
 
 void loop()
 {
-    if (!client.connected())
+    if (!mqtt_client.connected())
     {
         reconnect();
     }
-    client.loop();
-
-    // NTP Update
-    timeClient.update();
+    mqtt_client.loop();
 
     sensors_event_t event;
 
@@ -240,9 +236,10 @@ void loop()
     if (totalEnergy(vReal) >= energy_thresh || realtime)
     {
         // JSON buffer
-        StaticJsonBuffer<180> jsonBuffer;
-        JsonObject &root = jsonBuffer.createObject();
+        const size_t bufferSize = JSON_ARRAY_SIZE(15) + JSON_OBJECT_SIZE(3) + 210;
+        DynamicJsonBuffer jsonBuffer(bufferSize);
 
+        JsonObject &root = jsonBuffer.createObject();
         root["timestamp"] = timeClient.getEpochTime();
         root["accl_mag"] = accl_mag;
 
@@ -254,15 +251,23 @@ void loop()
 
         String json_output;
         root.printTo(json_output);
+        char payload[bufferSize];
 
         // Construct payload item
-        json_output.toCharArray(payload, 180);
+        json_output.toCharArray(payload, bufferSize);
 
-        if (client.connected())
+        if (mqtt_client.connected())
         {
-            client.publish("accelerometer_out", payload);
-            Serial.print("Publish message: ");
-            Serial.println(json_output);
+            if (mqtt_client.publish("esp8266/accelerometer_out", payload, bufferSize) == 1)
+            {
+                Serial.print("Publish message: ");
+                Serial.println(payload);
+            }
+            else
+            {
+                Serial.print("Publish failed: ");
+                Serial.println(payload);
+            }
         }
     }
 }
