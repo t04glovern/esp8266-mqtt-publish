@@ -28,6 +28,8 @@
 #define FILTER_FREQUENCY 10   // filter 10Hz and higher
 #define SAMPLES_PER_SECOND 64 //sample at 30Hz - Needs to be minimum 2x higher than desired filterFrequency
 
+#define MQTT_MAX_PACKET_SIZE 255 // override size
+
 /********************************************/
 /*                 Globals                  */
 /********************************************/
@@ -142,7 +144,9 @@ void reconnect()
         if (client.connect(mqtt_server_client_id, mqtt_server_user, mqtt_server_pass))
         {
             Serial.println("connected");
-            // ... and subscribe to topic
+            // Once connected, publish an announcement...
+            client.publish("test/pub", "hello world");
+            // ... and resubscribe
             client.subscribe(mqtt_thing_topic_sub);
         }
         else
@@ -188,6 +192,12 @@ void setup()
 
 void loop()
 {
+    if (!client.connected())
+    {
+        reconnect();
+    }
+    client.loop();
+
     // NTP Update
     timeClient.update();
 
@@ -230,10 +240,9 @@ void loop()
     if (totalEnergy(vReal) >= energy_thresh || realtime)
     {
         // JSON buffer
-        StaticJsonBuffer<220> jsonBuffer;
+        StaticJsonBuffer<180> jsonBuffer;
         JsonObject &root = jsonBuffer.createObject();
 
-        root["thing_id"] = thing_id;
         root["timestamp"] = timeClient.getEpochTime();
         root["accl_mag"] = accl_mag;
 
@@ -247,17 +256,13 @@ void loop()
         root.printTo(json_output);
 
         // Construct payload item
-        json_output.toCharArray(payload, 220);
+        json_output.toCharArray(payload, 180);
 
-        Serial.print("Publish message: ");
-        Serial.println(json_output);
-
-        if (!client.connected())
+        if (client.connected())
         {
-            reconnect();
+            client.publish("accelerometer_out", payload);
+            Serial.print("Publish message: ");
+            Serial.println(json_output);
         }
-        client.loop();
-
-        client.publish(mqtt_thing_topic_pub, payload);
     }
 }

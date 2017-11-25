@@ -29,7 +29,6 @@ char *mqtt_thing_topic_sub = "feedback_in";
 
 ```
 
-
 ## MQTT Providers
 
 ### CloudMQTT
