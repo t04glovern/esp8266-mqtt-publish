@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "type_traits": "cpp",
+        "cstdio": "cpp",
+        "array": "cpp",
+        "functional": "cpp"
+    }
+}
