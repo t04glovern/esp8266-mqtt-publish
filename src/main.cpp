@@ -236,18 +236,20 @@ void loop()
     if (totalEnergy(vReal) >= energy_thresh || realtime)
     {
         // JSON buffer
-        const size_t bufferSize = JSON_ARRAY_SIZE(15) + JSON_OBJECT_SIZE(3) + 210;
+        const size_t bufferSize = /*JSON_ARRAY_SIZE(15) + */JSON_OBJECT_SIZE(2) + 20;
         DynamicJsonBuffer jsonBuffer(bufferSize);
 
         JsonObject &root = jsonBuffer.createObject();
         root["timestamp"] = timeClient.getEpochTime();
         root["accl_mag"] = accl_mag;
 
+        /*
         JsonArray &accl_fft_data = root.createNestedArray("accl_fft");
         for (int ii = 2; ii <= Nbins - 1; ii += 2)
         {
             accl_fft_data.add(vReal[ii]);
         }
+        */
 
         String json_output;
         root.printTo(json_output);
@@ -255,10 +257,11 @@ void loop()
 
         // Construct payload item
         json_output.toCharArray(payload, bufferSize);
+        snprintf(payload, bufferSize, json_output.c_str());
 
         if (mqtt_client.connected())
         {
-            if (mqtt_client.publish("esp8266/accelerometer_out", payload, bufferSize) == 1)
+            if (mqtt_client.publish(mqtt_thing_topic_pub, payload) == 1)
             {
                 Serial.print("Publish message: ");
                 Serial.println(payload);
@@ -266,6 +269,8 @@ void loop()
             else
             {
                 Serial.print("Publish failed: ");
+                Serial.print(mqtt_client.state());
+                Serial.print(" : ");
                 Serial.println(payload);
             }
         }
