@@ -1,16 +1,16 @@
 #ifndef MAIN_H
 
 // Wifi Details
-const char *ssid = "FSH-Service";
-const char *password = "Ring^Lake^Enemy^47_";
+const char *ssid = "YourWifiSSID";
+const char *password = "YourWifiPassword";
 
-const String thing_id = "thing-01";
+const String thing_id = "YourThingID";
 
 // MQTT Details
 char *mqtt_server = "m14.cloudmqtt.com";
 char *mqtt_server_client_id = "esp8266-device-01";
-char *mqtt_server_user = "xrtdjyzz";
-char *mqtt_server_pass = "np5yUl4nBEBh";
+char *mqtt_server_user = "CloudMQTTUser";
+char *mqtt_server_pass = "CloudMQTTPass";
 int mqtt_server_port = 18583;
 
 char *mqtt_thing_topic_pub = "accelerometer_out";
