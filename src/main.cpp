@@ -31,8 +31,8 @@
 #define SAMPLES_PER_SECOND 64 //sample at 30Hz - Needs to be minimum 2x higher than desired filterFrequency
 
 // MQTT Packet Size override
-#ifdef MQTT_MAX_PACKET_SIZE      //if the macro MQTT_MAX_PACKET_SIZE is defined
-#undef MQTT_MAX_PACKET_SIZE      // un-define it
+#ifdef MQTT_MAX_PACKET_SIZE       // if the macro MQTT_MAX_PACKET_SIZE is defined
+#undef MQTT_MAX_PACKET_SIZE       // un-define it
 #define MQTT_MAX_PACKET_SIZE 1024 // override size
 #endif
 
@@ -61,6 +61,9 @@ double vImag[Nbins];
 float delayTime;
 float accl_mag;
 int lastTime = 0;
+
+// Speaker PIN
+int speakerOut = 15;
 
 FilterOnePole filterX(LOWPASS, FILTER_FREQUENCY);
 FilterOnePole filterY(LOWPASS, FILTER_FREQUENCY);
@@ -101,6 +104,21 @@ void callback(char *topic, byte *payLoad, unsigned int payloadLen)
     strncpy(rcvdPayload, reinterpret_cast<const char *>(payLoad), payloadLen);
     rcvdPayload[payloadLen] = 0;
     msgReceived = 1;
+}
+
+void beep(unsigned char delayms)
+{
+    analogWrite(speakerOut, 250); // Almost any value can be used except 0 and 255
+                                  // experiment to get the best tone
+    delay(delayms);               // wait for a delayms ms
+    analogWrite(speakerOut, 0);   // 0 turns it off
+    delay(delayms);               // wait for a delayms ms
+}
+
+void setup_buzzer()
+{
+    pinMode(speakerOut, OUTPUT);
+    analogWrite(speakerOut, 0);
 }
 
 void setup_wifi()
@@ -179,6 +197,7 @@ void setup()
     Serial.begin(9600);
     delay(1000);
 
+    setup_buzzer();
     setup_wifi();
     setup_ntp();
     setup_mqtt();
@@ -236,7 +255,7 @@ void loop()
     if (totalEnergy(vReal) >= energy_thresh || realtime)
     {
         // JSON buffer
-        const size_t bufferSize = /*JSON_ARRAY_SIZE(15) + */JSON_OBJECT_SIZE(2) + 20;
+        const size_t bufferSize = /*JSON_ARRAY_SIZE(15) + */ JSON_OBJECT_SIZE(2) + 20;
         DynamicJsonBuffer jsonBuffer(bufferSize);
 
         JsonObject &root = jsonBuffer.createObject();
@@ -265,6 +284,11 @@ void loop()
             {
                 Serial.print("Publish message: ");
                 Serial.println(payload);
+
+                if (totalEnergy(vReal) >= energy_thresh)
+                {
+                    beep(200);
+                }
             }
             else
             {

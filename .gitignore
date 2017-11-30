@@ -1,6 +1,7 @@
+## PlatformIO
 .pioenvs
 .piolibdeps
-.vscode/c_cpp_properties.json
+.vscode
 
 ## Custom
 src/main.h.secret
