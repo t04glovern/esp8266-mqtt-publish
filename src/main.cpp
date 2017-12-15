@@ -10,7 +10,7 @@
 // Wifi and NTP Support
 #include <ESP8266WiFi.h>
 #include <NTPClient.h>
-#include <WiFiUDP.h>
+#include <WiFiUdp.h>
 
 // MQTT
 #include <PubSubClient.h>
