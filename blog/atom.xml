@@ -14,7 +14,16 @@
         <link href="https://t04glovern.github.io/blog/2017/12/15/introduction.html">
         </link>
         <updated>2017-12-15T06:00:00Z</updated>
-        <summary type="html"><![CDATA[Introduction to the ESP8266 project]]></summary>
+        <summary type="html"><![CDATA[Introduction to the ESP8266 project
+
+#### Built With
+
+* [PlatformIO](https://platformio.org)
+
+#### Maintained With
+
+* [CircleCI](https://circleci.com)
+* [Docusaurus](https://docusaurus.io)]]></summary>
         <author>
             <name>Nathan Glover</name>
             <uri>https://nathanglover.com/</uri>

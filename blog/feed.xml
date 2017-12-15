@@ -18,7 +18,16 @@
             <link>https://t04glovern.github.io/blog/2017/12/15/introduction.html</link>
             <guid>https://t04glovern.github.io/blog/2017/12/15/introduction.html</guid>
             <pubDate>Fri, 15 Dec 2017 06:00:00 GMT</pubDate>
-            <description><![CDATA[Introduction to the ESP8266 project]]></description>
+            <description><![CDATA[Introduction to the ESP8266 project
+
+#### Built With
+
+* [PlatformIO](https://platformio.org)
+
+#### Maintained With
+
+* [CircleCI](https://circleci.com)
+* [Docusaurus](https://docusaurus.io)]]></description>
         </item>
     </channel>
 </rss>
