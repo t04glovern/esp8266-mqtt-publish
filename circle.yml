@@ -1,0 +1,14 @@
+machine:
+  node:
+    version: 6.11.2
+  yarn:
+    version: 3.10.10
+
+deployment:
+  website:
+    branch: master
+    commands:
+      - git config --global user.email "nathan@glovers.id.au"
+      - git config --global user.name "Nathan Glover"
+      - echo "machine github.com login t04glovern password $GITHUB_TOKEN" > ~/.netrc
+      - cd website && npm install && GIT_USER=t04glovern npm run publish-gh-pages
