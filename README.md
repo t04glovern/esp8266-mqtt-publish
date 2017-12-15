@@ -1,5 +1,4 @@
-# ESP8266 MQTT Publisher [![Build Status](https://travis-ci.org/t04glovern/esp8266-mqtt-publish.svg?branch=master)](https://travis-ci.org/t04glovern/esp8266-mqtt-publish)
-[![Docs](https://img.shields.io/badge/docs-readme-brightgreen.svg)](https://t04glovern.github.io/esp8266-mqtt-publish)
+# ESP8266 MQTT Publisher [![Build Status](https://travis-ci.org/t04glovern/esp8266-mqtt-publish.svg?branch=master)](https://travis-ci.org/t04glovern/esp8266-mqtt-publish)[![Docs](https://img.shields.io/badge/docs-readme-brightgreen.svg)](https://t04glovern.github.io/esp8266-mqtt-publish)
 
 
 ESP8266 implementation of an MQTT Publisher
