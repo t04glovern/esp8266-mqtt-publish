@@ -2,6 +2,7 @@
 .pioenvs
 .piolibdeps
 .vscode
+.vscode/c_cpp_properties.json
 
 ## Custom
 src/main.h.secret
